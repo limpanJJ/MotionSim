@@ -5,7 +5,7 @@ namespace MotionSimulator;
 
 public class GpxParser
 {
-    public static void ReadFile()
+    public static Activity CreateActivity()
     {
         var filename = "Night_Walk.gpx";
         var currentDirectory = Directory.GetCurrentDirectory();
@@ -130,6 +130,9 @@ public class GpxParser
         {
             Console.WriteLine(element);
         }
+
+        return activity;
+
 
         // IEnumerable<XElement> c1 = from el in gpxDoc.Elements(gpx + "ele") select el;
         // foreach (XElement el in c1)
