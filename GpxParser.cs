@@ -1,35 +1,10 @@
-using System;
-using System.ComponentModel;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Xml;
 using System.Xml.Linq;
-using Microsoft.VisualBasic;
 
-namespace LoppSimulator;
+namespace MotionSimulator;
 
 public class GpxParser
 {
-    public record class TrackPoint(
-        double Latitude,
-        double Longitude,
-        decimal? Elevation,
-        DateTimeOffset? Time
-    );
-    public class Activity
-    {
-        public int Id { get; set; }
-        public DateTimeOffset? CreatedAt { get; set; }
-        public string? Name { get; set; }
-        public string? ActivityType { get; set; }
-        public List<TrackPoint> TrackPoints { get; set; } = new();
-
-        public void AddDetails(TrackPoint trackpoint)
-        {
-            TrackPoints.Add(trackpoint);
-        }
-
-    }
     public static void ReadFile()
     {
         var filename = "Night_Walk.gpx";
@@ -47,30 +22,30 @@ public class GpxParser
         Console.WriteLine(firstTrkPt);
 
 
-        var newActivity = new Activity();
+        var parseData = new ParsedData();
 
         foreach (XElement element in gpxDoc.Descendants())
         {
             // Get Activity activity creation time
-            if (element.Name.LocalName == "time" && element.Parent.Name.LocalName == "metadata")
+            if (element.Name.LocalName == "time" && element.Parent?.Name.LocalName == "metadata")
             {
                 DateTimeOffset timestamp = DateTimeOffset.Parse(element.Value);
-                newActivity.CreatedAt = timestamp;
+                parseData.CreatedAt = timestamp;
             }
 
             // Get Name of the activity
-            if (element.Name.LocalName == "name" && element.Parent.Name.LocalName == "trk")
+            if (element.Name.LocalName == "name" && element.Parent?.Name.LocalName == "trk")
             {
-                newActivity.Name = element.Value;
+                parseData.Name = element.Value;
             }
             // Get Type of activity
-            if (element.Name.LocalName == "type" && element.Parent.Name.LocalName == "trk")
+            if (element.Name.LocalName == "type" && element.Parent?.Name.LocalName == "trk")
             {
-                newActivity.ActivityType = element.Value;
+                parseData.ActivityType = element.Value;
             }
 
             // Get Latitude and Longitude
-            if (element.Name.LocalName == "trkpt" && element.Parent.Name.LocalName == "trkseg")
+            if (element.Name.LocalName == "trkpt" && element.Parent?.Name.LocalName == "trkseg")
             {
                 var latAttr = element.Attribute("lat");
                 var lonAttr = element.Attribute("lon");
@@ -91,10 +66,10 @@ public class GpxParser
                 var eleElement = element.Elements()
                     .FirstOrDefault(e => e.Name.LocalName == "ele");
 
-                var raw = eleElement.Value.Trim();
 
                 if (eleElement != null)
                 {
+                    var raw = eleElement.Value.Trim();
                     if (!decimal.TryParse(raw,
                     NumberStyles.Float,
                     CultureInfo.InvariantCulture,
@@ -113,37 +88,45 @@ public class GpxParser
                 var timeElement = element.Elements()
                     .FirstOrDefault(e => e.Name.LocalName == "time");
 
+                if (timeElement is null)
+                {
+                    // missing time is OK!
+                    continue;
+                }
                 var rawTime = timeElement.Value.Trim();
 
-                if (timeElement != null)
-                {
-                    if (!DateTimeOffset.TryParseExact
+                if (!DateTimeOffset.TryParseExact
                     (rawTime,
                     dateFormat,
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal,
                     out var parsedTime))
-                    {
-                        throw new FormatException("Invalid time format.");
-                    }
-                    trackTime = parsedTime;
+                {
+                    throw new FormatException("Invalid time format.");
                 }
+                trackTime = parsedTime;
+
                 var track = new TrackPoint(latitude, longitude, elevation, trackTime);
-                // Add Trackdetails to the 
-                newActivity.AddDetails(track);
+                // Add Trackdetails to the ParseData
+                parseData.TrackPoints.Add(track);
+
             }
 
-
-            // if (element.Name.LocalName == "trkpt")
-            // {
-            //     foreach (XAttribute attribute in element.Attributes())
-            //     {
-            //         Console.WriteLine($"{attribute.Name}: {attribute.Value}");
-            //     }
-            // }
-            // Console.WriteLine($"{element.Name.LocalName}: {element.Value}");
         }
-        foreach (var element in newActivity.TrackPoints)
+
+        var activity = new Activity(
+            parseData.CreatedAt,
+            parseData.Name,
+            parseData.ActivityType
+        );
+
+        foreach (var tp in parseData.TrackPoints)
+        {
+            activity.AddTrackpoints(tp);
+        }
+
+
+        foreach (var element in activity.TrackPoints)
         {
             Console.WriteLine(element);
         }
@@ -152,4 +135,13 @@ public class GpxParser
         // foreach (XElement el in c1)
         //     Console.WriteLine(el);
     }
+    internal sealed class ParsedData
+    {
+        public DateTimeOffset CreatedAt { get; set; }
+        public string? Name { get; set; }
+        public string? ActivityType { get; set; }
+
+        public List<TrackPoint> TrackPoints { get; } = new();
+    }
+
 }
