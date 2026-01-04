@@ -19,7 +19,7 @@ public class GpxParser
             .Descendants(gpx + "trkpt")
             .FirstOrDefault();
 
-        Console.WriteLine(firstTrkPt);
+        // Console.WriteLine(firstTrkPt);
 
 
         var parseData = new ParsedData();
@@ -126,10 +126,10 @@ public class GpxParser
         }
 
 
-        foreach (var element in activity.TrackPoints)
-        {
-            Console.WriteLine(element);
-        }
+        // foreach (var element in activity.TrackPoints)
+        // {
+        //     Console.WriteLine(element);
+        // }
 
         return activity;
 

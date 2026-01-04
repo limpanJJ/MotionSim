@@ -5,12 +5,37 @@ public sealed class ActivityAnalyzer
     public ActivityMetrics Analyze(Activity activity)
     {
         double totalDistance = CalculateTotalDistance(activity);
+        decimal totalElevation = CalculateElevationGain(activity);
 
         return new ActivityMetrics
         {
-            DistanceKm = totalDistance
+            DistanceKm = totalDistance,
+            ElevationGain = totalElevation
         };
     }
+    // ELEVATION GAIN
+    public decimal CalculateElevationGain(Activity activity)
+    {
+        var points = activity.TrackPoints;
+        decimal total = 0;
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            total += ElevationChange(points[i], points[i + 1]);
+        }
+        return total;
+    }
+
+    private static decimal ElevationChange(decimal? e1, decimal? e2)
+    {
+        if (e1 is null || e2 is null)
+            return 0m;
+        if (e1 > e2)
+            return 0m;
+
+        return e2.Value - e1.Value;
+
+    }
+    // TOTAL DISTANCE
     public double CalculateTotalDistance(Activity activity)
     {
         var points = activity.TrackPoints;
@@ -46,6 +71,11 @@ public sealed class ActivityAnalyzer
         double rad = 6371;
         double c = 2 * Math.Asin(Math.Sqrt(a));
         return rad * c;
+    }
+
+    private static decimal ElevationChange(TrackPoint p1, TrackPoint p2)
+    {
+        return ElevationChange(p1.Elevation, p2.Elevation);
     }
     public static double Haversine(TrackPoint p1, TrackPoint p2)
     {
